@@ -3,6 +3,7 @@ import sys
 import math
 import random
 from enum import Enum
+from collections import defaultdict, deque
 
 # Initialize Pygame
 pygame.init()
@@ -28,11 +29,20 @@ DARK_RED = (153, 27, 27)
 GRAY = (100, 100, 100)
 BLACK = (0, 0, 0)
 LIGHT_GREEN = (34, 197, 94)
+PURPLE = (168, 85, 247)
+DARK_PURPLE = (88, 28, 135)
+YELLOW = (234, 179, 8)
 
 class GameState(Enum):
     MENU = 1
     PLAYING = 2
     PAUSED = 3
+    DIFFICULTY_SELECT = 4
+
+class Difficulty(Enum):
+    EASY = 1
+    MEDIUM = 2
+    HARD = 3
 
 class Ball:
     def __init__(self, x, y):
@@ -48,7 +58,7 @@ class Ball:
         self.vx *= 0.98
         self.vy *= 0.98
         
-        # Boundary collision (top and bottom)
+        # Boundary collision
         if self.y < self.radius or self.y > FIELD_HEIGHT - self.radius:
             self.vy *= -0.8
             self.y = max(self.radius, min(FIELD_HEIGHT - self.radius, self.y))
@@ -66,6 +76,9 @@ class Player:
         self.color = color
         self.name = name
         self.speed = 3.5
+        self.possession_time = 0
+        self.shots_taken = 0
+        self.shots_on_goal = 0
     
     def move(self, dx, dy):
         self.x += dx
@@ -81,7 +94,6 @@ class Player:
                          (int(self.x + offset_x), int(self.y + offset_y)), 
                          self.radius)
         
-        # Draw label
         font = pygame.font.Font(None, 20)
         text = font.render(self.name[0], True, WHITE)
         text_rect = text.get_rect(center=(int(self.x + offset_x), 
@@ -89,208 +101,283 @@ class Player:
         screen.blit(text, text_rect)
 
 class MinimaxAgent:
-    """Minimax with tree-search approach"""
-    def __init__(self, player, goal_x, goal_y):
+    """Simplified Minimax with balanced parameters"""
+    def __init__(self, player, goal_x, goal_y, difficulty=Difficulty.MEDIUM):
         self.player = player
         self.goal_x = goal_x
         self.goal_y = goal_y
-        self.last_ball_x = 0
-        self.last_ball_y = 0
+        self.difficulty = difficulty
+        
+        # BALANCED parameters - all agents equal at same difficulty
+        if difficulty == Difficulty.EASY:
+            self.prediction_frames = 6
+            self.error_rate = 0.25  # 25% chance of mistake
+        elif difficulty == Difficulty.MEDIUM:
+            self.prediction_frames = 8
+            self.error_rate = 0.15  # 15% chance of mistake
+        else:  # HARD
+            self.prediction_frames = 10
+            self.error_rate = 0.05  # 5% chance of mistake
     
     def get_action(self, ball, opponent):
+        """Get action with strategic behavior"""
         dist_to_ball = self.player.distance_to(ball.x, ball.y)
         
-        # Calculate if we're closer to ball than opponent
-        opponent_dist = opponent.distance_to(ball.x, ball.y)
-        we_are_closer = dist_to_ball < opponent_dist
+        # Random mistakes for balance
+        if random.random() < self.error_rate:
+            angle = random.uniform(0, 2 * math.pi)
+            dx = math.cos(angle) * self.player.speed
+            dy = math.sin(angle) * self.player.speed
+            return (dx, dy, False)
         
         # Shooting range
-        if dist_to_ball < 15:
-            # Calculate best shooting angle
+        if dist_to_ball < 20:
             dx = self.goal_x - ball.x
             dy = self.goal_y - ball.y
             dist = math.sqrt(dx * dx + dy * dy)
             
+            # Add shooting inaccuracy
             if dist > 0:
-                # Move toward shooting position and kick
-                move_x = dx / dist * self.player.speed * 0.7
-                move_y = dy / dist * self.player.speed * 0.7
-                return (move_x, move_y, True)
+                angle = math.atan2(dy, dx)
+                angle += random.uniform(-0.2, 0.2)  # Small angle variation
+                return (math.cos(angle) * self.player.speed * 0.8, 
+                       math.sin(angle) * self.player.speed * 0.8, True)
         
-        # If ball is moving fast, predict and intercept
-        ball_speed = math.sqrt(ball.vx**2 + ball.vy**2)
-        if ball_speed > 1.5:
-            # Predict where ball will be
-            prediction_time = 8
-            predicted_x = ball.x + ball.vx * prediction_time
-            predicted_y = ball.y + ball.vy * prediction_time
-            
-            # Clamp prediction to field
-            predicted_x = max(50, min(FIELD_WIDTH - 50, predicted_x))
-            predicted_y = max(50, min(FIELD_HEIGHT - 50, predicted_y))
-            
-            dx = predicted_x - self.player.x
-            dy = predicted_y - self.player.y
-        else:
-            # Chase ball directly
-            dx = ball.x - self.player.x
-            dy = ball.y - self.player.y
+        # Predict ball position
+        predicted_x = ball.x + ball.vx * self.prediction_frames
+        predicted_y = ball.y + ball.vy * self.prediction_frames
+        predicted_x = max(30, min(FIELD_WIDTH - 30, predicted_x))
+        predicted_y = max(30, min(FIELD_HEIGHT - 30, predicted_y))
         
+        # Chase predicted position
+        dx = predicted_x - self.player.x
+        dy = predicted_y - self.player.y
         dist = math.sqrt(dx * dx + dy * dy)
+        
         if dist > 0:
-            # Speed up if we're closer
-            speed_mult = 1.0 if we_are_closer else 0.95
-            return (dx / dist * self.player.speed * speed_mult, 
-                   dy / dist * self.player.speed * speed_mult, False)
+            return (dx / dist * self.player.speed, 
+                   dy / dist * self.player.speed, False)
         
         return (0, 0, False)
 
 class DQNAgent:
-    """DQN with reinforcement learning approach"""
-    def __init__(self, player, goal_x, goal_y):
+    """Simplified DQN with balanced parameters"""
+    def __init__(self, player, goal_x, goal_y, difficulty=Difficulty.MEDIUM):
         self.player = player
         self.goal_x = goal_x
         self.goal_y = goal_y
-        self.defensive_mode = False
+        self.difficulty = difficulty
+        
+        # BALANCED parameters - same as Minimax
+        if difficulty == Difficulty.EASY:
+            self.prediction_frames = 6
+            self.error_rate = 0.25
+        elif difficulty == Difficulty.MEDIUM:
+            self.prediction_frames = 8
+            self.error_rate = 0.15
+        else:  # HARD
+            self.prediction_frames = 10
+            self.error_rate = 0.05
     
     def get_action(self, ball, opponent):
+        """Get action with strategic behavior"""
         dist_to_ball = self.player.distance_to(ball.x, ball.y)
-        opponent_dist = opponent.distance_to(ball.x, ball.y)
         
-        # Calculate ball movement toward our goal
-        ball_to_goal_dist = math.sqrt((ball.x - self.goal_x)**2 + (ball.y - self.goal_y)**2)
-        ball_moving_to_goal = False
-        if abs(ball.vx) > 1:
-            if (self.goal_x == 0 and ball.vx < 0) or (self.goal_x == FIELD_WIDTH and ball.vx > 0):
-                ball_moving_to_goal = True
-        
-        # Defensive positioning when opponent has ball
-        if opponent_dist < dist_to_ball and opponent_dist < 25:
-            self.defensive_mode = True
-        else:
-            self.defensive_mode = False
+        # Random mistakes for balance
+        if random.random() < self.error_rate:
+            angle = random.uniform(0, 2 * math.pi)
+            dx = math.cos(angle) * self.player.speed
+            dy = math.sin(angle) * self.player.speed
+            return (dx, dy, False)
         
         # Shooting range
-        if dist_to_ball < 15:
+        if dist_to_ball < 20:
             dx = self.goal_x - ball.x
             dy = self.goal_y - ball.y
             dist = math.sqrt(dx * dx + dy * dy)
             
             if dist > 0:
-                return (dx / dist * self.player.speed * 0.7, 
-                       dy / dist * self.player.speed * 0.7, True)
+                angle = math.atan2(dy, dx)
+                angle += random.uniform(-0.2, 0.2)  # Small angle variation
+                return (math.cos(angle) * self.player.speed * 0.8, 
+                       math.sin(angle) * self.player.speed * 0.8, True)
         
-        # Aggressive interception mode
-        if dist_to_ball < 30 or ball_moving_to_goal:
-            # Predict ball position
-            prediction_frames = 10
-            predicted_x = ball.x + ball.vx * prediction_frames
-            predicted_y = ball.y + ball.vy * prediction_frames
-            
-            # Clamp to field
-            predicted_x = max(50, min(FIELD_WIDTH - 50, predicted_x))
-            predicted_y = max(50, min(FIELD_HEIGHT - 50, predicted_y))
-            
-            dx = predicted_x - self.player.x
-            dy = predicted_y - self.player.y
+        # Predict ball position with slightly different strategy
+        predicted_x = ball.x + ball.vx * self.prediction_frames
+        predicted_y = ball.y + ball.vy * self.prediction_frames
+        predicted_x = max(30, min(FIELD_WIDTH - 30, predicted_x))
+        predicted_y = max(30, min(FIELD_HEIGHT - 30, predicted_y))
+        
+        # Intercept predicted position
+        dx = predicted_x - self.player.x
+        dy = predicted_y - self.player.y
+        dist = math.sqrt(dx * dx + dy * dy)
+        
+        if dist > 0:
+            return (dx / dist * self.player.speed, 
+                   dy / dist * self.player.speed, False)
+        
+        return (0, 0, False)
+
+class HeuristicAgent:
+    """Simplified Heuristic with balanced parameters"""
+    def __init__(self, player, goal_x, goal_y, difficulty=Difficulty.MEDIUM):
+        self.player = player
+        self.goal_x = goal_x
+        self.goal_y = goal_y
+        self.difficulty = difficulty
+        
+        # BALANCED parameters - same as others
+        if difficulty == Difficulty.EASY:
+            self.prediction_frames = 6
+            self.error_rate = 0.25
+        elif difficulty == Difficulty.MEDIUM:
+            self.prediction_frames = 8
+            self.error_rate = 0.15
+        else:  # HARD
+            self.prediction_frames = 10
+            self.error_rate = 0.05
+    
+    def get_action(self, ball, opponent):
+        """Get action with strategic behavior"""
+        dist_to_ball = self.player.distance_to(ball.x, ball.y)
+        
+        # Random mistakes for balance
+        if random.random() < self.error_rate:
+            angle = random.uniform(0, 2 * math.pi)
+            dx = math.cos(angle) * self.player.speed
+            dy = math.sin(angle) * self.player.speed
+            return (dx, dy, False)
+        
+        # Shooting range
+        if dist_to_ball < 20:
+            dx = self.goal_x - ball.x
+            dy = self.goal_y - ball.y
             dist = math.sqrt(dx * dx + dy * dy)
             
             if dist > 0:
-                return (dx / dist * self.player.speed, 
-                       dy / dist * self.player.speed, False)
+                angle = math.atan2(dy, dx)
+                angle += random.uniform(-0.2, 0.2)  # Small angle variation
+                return (math.cos(angle) * self.player.speed * 0.8, 
+                       math.sin(angle) * self.player.speed * 0.8, True)
         
-        # Strategic positioning - stay between ball and goal
-        if self.defensive_mode:
-            # Position between ball and goal
-            target_x = (ball.x + self.goal_x) / 2
-            target_y = (ball.y + self.goal_y) / 2
-            
-            dx = target_x - self.player.x
-            dy = target_y - self.player.y
-        else:
-            # Chase ball
-            dx = ball.x - self.player.x
-            dy = ball.y - self.player.y
+        # Direct chase with prediction
+        predicted_x = ball.x + ball.vx * self.prediction_frames
+        predicted_y = ball.y + ball.vy * self.prediction_frames
+        predicted_x = max(30, min(FIELD_WIDTH - 30, predicted_x))
+        predicted_y = max(30, min(FIELD_HEIGHT - 30, predicted_y))
         
+        dx = predicted_x - self.player.x
+        dy = predicted_y - self.player.y
         dist = math.sqrt(dx * dx + dy * dy)
+        
         if dist > 0:
-            return (dx / dist * self.player.speed * 0.95, 
-                   dy / dist * self.player.speed * 0.95, False)
+            return (dx / dist * self.player.speed, 
+                   dy / dist * self.player.speed, False)
         
         return (0, 0, False)
 
 class SoccerGame:
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("AI Soccer: Minimax vs DQN")
+        pygame.display.set_caption("AI Soccer: Balanced Competition")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.Font(None, 36)
         self.small_font = pygame.font.Font(None, 24)
+        self.tiny_font = pygame.font.Font(None, 18)
         
         self.state = GameState.MENU
-        self.reset_game()
+        self.agent_mode = 0
+        self.difficulty = Difficulty.MEDIUM
         
         # Statistics
-        self.total_goals_minimax = 0
-        self.total_goals_dqn = 0
+        self.total_goals = {
+            'minimax': 0,
+            'dqn': 0,
+            'heuristic': 0
+        }
         self.match_goals_left = 0
         self.match_goals_right = 0
+        self.possession_frames = {'left': 0, 'right': 0}
+        self.total_frames = 0
         
-        # Field offset for centering
         self.offset_x = (SCREEN_WIDTH - FIELD_WIDTH) // 2
         self.offset_y = 50
+        
+        self.reset_game()
     
     def reset_game(self):
         self.ball = Ball(FIELD_WIDTH // 2, FIELD_HEIGHT // 2)
-        # Small random velocity
+        # Random ball start with MORE variation
         angle = random.uniform(0, 2 * math.pi)
-        speed = random.uniform(0.5, 1.5)
+        speed = random.uniform(2, 4)  # Faster initial speed
         self.ball.vx = math.cos(angle) * speed
         self.ball.vy = math.sin(angle) * speed
         
-        self.player1 = Player(150, FIELD_HEIGHT // 2, BLUE, "Minimax")
-        self.player2 = Player(FIELD_WIDTH - 150, FIELD_HEIGHT // 2, RED, "DQN")
-        
-        self.minimax_agent = MinimaxAgent(self.player1, FIELD_WIDTH - 10, FIELD_HEIGHT // 2)
-        self.dqn_agent = DQNAgent(self.player2, 10, FIELD_HEIGHT // 2)
+        # Create players based on mode
+        if self.agent_mode == 0:  # Minimax vs DQN
+            self.player1 = Player(150, FIELD_HEIGHT // 2, BLUE, "Minimax")
+            self.player2 = Player(FIELD_WIDTH - 150, FIELD_HEIGHT // 2, PURPLE, "DQN")
+            self.agent1 = MinimaxAgent(self.player1, FIELD_WIDTH, FIELD_HEIGHT // 2, self.difficulty)
+            self.agent2 = DQNAgent(self.player2, 0, FIELD_HEIGHT // 2, self.difficulty)
+            self.agent1_name = 'minimax'
+            self.agent2_name = 'dqn'
+        elif self.agent_mode == 1:  # Minimax vs Heuristic
+            self.player1 = Player(150, FIELD_HEIGHT // 2, BLUE, "Minimax")
+            self.player2 = Player(FIELD_WIDTH - 150, FIELD_HEIGHT // 2, RED, "Heuristic")
+            self.agent1 = MinimaxAgent(self.player1, FIELD_WIDTH, FIELD_HEIGHT // 2, self.difficulty)
+            self.agent2 = HeuristicAgent(self.player2, 0, FIELD_HEIGHT // 2, self.difficulty)
+            self.agent1_name = 'minimax'
+            self.agent2_name = 'heuristic'
+        else:  # DQN vs Heuristic
+            self.player1 = Player(150, FIELD_HEIGHT // 2, PURPLE, "DQN")
+            self.player2 = Player(FIELD_WIDTH - 150, FIELD_HEIGHT // 2, RED, "Heuristic")
+            self.agent1 = DQNAgent(self.player1, FIELD_WIDTH, FIELD_HEIGHT // 2, self.difficulty)
+            self.agent2 = HeuristicAgent(self.player2, 0, FIELD_HEIGHT // 2, self.difficulty)
+            self.agent1_name = 'dqn'
+            self.agent2_name = 'heuristic'
         
         self.match_goals_left = 0
         self.match_goals_right = 0
+        self.possession_frames = {'left': 0, 'right': 0}
+        self.total_frames = 0
     
     def reset_ball(self):
+        """Reset ball with random direction and speed"""
         self.ball = Ball(FIELD_WIDTH // 2, FIELD_HEIGHT // 2)
-        # Random starting direction
         angle = random.uniform(0, 2 * math.pi)
-        speed = random.uniform(1, 2)
+        speed = random.uniform(2, 4)
         self.ball.vx = math.cos(angle) * speed
         self.ball.vy = math.sin(angle) * speed
         
-        # Reset player positions with slight variation
-        self.player1.x = 150 + random.randint(-30, 30)
-        self.player1.y = FIELD_HEIGHT // 2 + random.randint(-50, 50)
-        self.player2.x = FIELD_WIDTH - 150 + random.randint(-30, 30)
-        self.player2.y = FIELD_HEIGHT // 2 + random.randint(-50, 50)
+        # Reset players with more variation
+        self.player1.x = 150 + random.randint(-50, 50)
+        self.player1.y = FIELD_HEIGHT // 2 + random.randint(-100, 100)
+        self.player2.x = FIELD_WIDTH - 150 + random.randint(-50, 50)
+        self.player2.y = FIELD_HEIGHT // 2 + random.randint(-100, 100)
     
     def check_goal(self):
         goal_y_min = FIELD_HEIGHT // 2 - GOAL_HEIGHT // 2
         goal_y_max = FIELD_HEIGHT // 2 + GOAL_HEIGHT // 2
         
-        # Left goal (DQN defends)
+        # Left goal (x=0) - Player2 (right) scores
         if self.ball.x < GOAL_WIDTH:
             if goal_y_min < self.ball.y < goal_y_max:
-                self.match_goals_left += 1
-                self.total_goals_minimax += 1
+                self.match_goals_right += 1
+                self.total_goals[self.agent2_name] += 1
+                self.player2.shots_on_goal += 1
                 self.reset_ball()
                 return True
             else:
                 self.ball.vx *= -0.8
                 self.ball.x = GOAL_WIDTH
         
-        # Right goal (Minimax defends)
+        # Right goal (x=FIELD_WIDTH) - Player1 (left) scores
         if self.ball.x > FIELD_WIDTH - GOAL_WIDTH:
             if goal_y_min < self.ball.y < goal_y_max:
-                self.match_goals_right += 1
-                self.total_goals_dqn += 1
+                self.match_goals_left += 1
+                self.total_goals[self.agent1_name] += 1
+                self.player1.shots_on_goal += 1
                 self.reset_ball()
                 return True
             else:
@@ -301,54 +388,61 @@ class SoccerGame:
     
     def handle_kick(self, player, dx, dy, should_kick):
         dist = player.distance_to(self.ball.x, self.ball.y)
-        if dist < player.radius + self.ball.radius and should_kick:
-            # Calculate kick direction
+        if dist < player.radius + self.ball.radius + 8 and should_kick:
             angle = math.atan2(dy, dx)
-            # Consistent kick power
-            power = 7.5
+            # Variable kick power for more interesting gameplay
+            power = random.uniform(6.5, 8.5)
             self.ball.vx = math.cos(angle) * power
             self.ball.vy = math.sin(angle) * power
+            player.shots_taken += 1
     
     def update(self):
         if self.state != GameState.PLAYING:
             return
         
         # Get AI actions
-        minimax_action = self.minimax_agent.get_action(self.ball, self.player2)
-        dqn_action = self.dqn_agent.get_action(self.ball, self.player1)
+        action1 = self.agent1.get_action(self.ball, self.player2)
+        action2 = self.agent2.get_action(self.ball, self.player1)
         
         # Move players
-        self.player1.move(minimax_action[0], minimax_action[1])
-        self.player2.move(dqn_action[0], dqn_action[1])
+        self.player1.move(action1[0], action1[1])
+        self.player2.move(action2[0], action2[1])
         
         # Handle kicks
-        self.handle_kick(self.player1, minimax_action[0], minimax_action[1], 
-                        minimax_action[2])
-        self.handle_kick(self.player2, dqn_action[0], dqn_action[1], 
-                        dqn_action[2])
+        self.handle_kick(self.player1, action1[0], action1[1], action1[2])
+        self.handle_kick(self.player2, action2[0], action2[1], action2[2])
         
         # Update ball
         self.ball.update()
+        
+        # Track possession
+        dist1 = self.player1.distance_to(self.ball.x, self.ball.y)
+        dist2 = self.player2.distance_to(self.ball.x, self.ball.y)
+        
+        if dist1 < 30:
+            self.possession_frames['left'] += 1
+            self.player1.possession_time += 1
+        if dist2 < 30:
+            self.possession_frames['right'] += 1
+            self.player2.possession_time += 1
+        
+        self.total_frames += 1
         
         # Check for goals
         self.check_goal()
     
     def draw_field(self):
-        # Field background
         pygame.draw.rect(self.screen, GREEN, 
                         (self.offset_x, self.offset_y, FIELD_WIDTH, FIELD_HEIGHT))
         
-        # Center line
         pygame.draw.line(self.screen, WHITE, 
                         (self.offset_x + FIELD_WIDTH // 2, self.offset_y),
                         (self.offset_x + FIELD_WIDTH // 2, self.offset_y + FIELD_HEIGHT), 3)
         
-        # Center circle
         pygame.draw.circle(self.screen, WHITE, 
                           (self.offset_x + FIELD_WIDTH // 2, 
                            self.offset_y + FIELD_HEIGHT // 2), 50, 3)
         
-        # Goals
         goal_y = self.offset_y + FIELD_HEIGHT // 2 - GOAL_HEIGHT // 2
         pygame.draw.rect(self.screen, DARK_RED, 
                         (self.offset_x, goal_y, GOAL_WIDTH, GOAL_HEIGHT))
@@ -356,78 +450,111 @@ class SoccerGame:
                         (self.offset_x + FIELD_WIDTH - GOAL_WIDTH, goal_y, 
                          GOAL_WIDTH, GOAL_HEIGHT))
         
-        # Field border
         pygame.draw.rect(self.screen, WHITE, 
                         (self.offset_x, self.offset_y, FIELD_WIDTH, FIELD_HEIGHT), 3)
     
     def draw_menu(self):
         self.screen.fill((15, 23, 42))
         
-        # Title
         title = self.font.render("AI SOCCER", True, WHITE)
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 60))
+        self.screen.blit(title, title_rect)
+        
+        subtitle = self.small_font.render("Balanced AI Competition", True, GRAY)
+        subtitle_rect = subtitle.get_rect(center=(SCREEN_WIDTH // 2, 95))
+        self.screen.blit(subtitle, subtitle_rect)
+        
+        # Difficulty display
+        diff_text = f"Difficulty: {self.difficulty.name}"
+        diff_render = self.small_font.render(diff_text, True, YELLOW)
+        diff_rect = diff_render.get_rect(center=(SCREEN_WIDTH // 2, 125))
+        self.screen.blit(diff_render, diff_rect)
+        
+        # Mode selection
+        mode_text = self.small_font.render("Select Match (1/2/3):", True, WHITE)
+        self.screen.blit(mode_text, (80, 160))
+        
+        modes = [
+            ("1: Minimax vs DQN", BLUE, PURPLE, 'minimax', 'dqn'),
+            ("2: Minimax vs Heuristic", BLUE, RED, 'minimax', 'heuristic'),
+            ("3: DQN vs Heuristic", PURPLE, RED, 'dqn', 'heuristic')
+        ]
+        
+        for i, (text, color1, color2, name1, name2) in enumerate(modes):
+            y = 200 + i * 75
+            selected = i == self.agent_mode
+            
+            box_color = (50, 50, 50) if not selected else (80, 80, 80)
+            pygame.draw.rect(self.screen, box_color, (60, y - 10, 880, 65), border_radius=10)
+            
+            mode_label = self.small_font.render(text, True, WHITE)
+            self.screen.blit(mode_label, (80, y))
+            
+            goals1 = self.total_goals[name1]
+            goals2 = self.total_goals[name2]
+            stats = self.tiny_font.render(f"All-time: {goals1} - {goals2}", True, GRAY)
+            self.screen.blit(stats, (80, y + 28))
+            
+            if selected:
+                indicator = self.small_font.render("►", True, LIGHT_GREEN)
+                self.screen.blit(indicator, (30, y + 5))
+        
+        # Instructions
+        inst1 = self.small_font.render("SPACE: Start | D: Difficulty | ESC: Quit", 
+                                      True, GRAY)
+        inst1_rect = inst1.get_rect(center=(SCREEN_WIDTH // 2, 500))
+        self.screen.blit(inst1, inst1_rect)
+        
+        info = self.tiny_font.render("All agents are balanced - equal parameters, competitive gameplay!", 
+                                    True, LIGHT_GREEN)
+        info_rect = info.get_rect(center=(SCREEN_WIDTH // 2, 540))
+        self.screen.blit(info, info_rect)
+    
+    def draw_difficulty_select(self):
+        self.screen.fill((15, 23, 42))
+        
+        title = self.font.render("SELECT DIFFICULTY", True, WHITE)
         title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 100))
         self.screen.blit(title, title_rect)
         
-        subtitle = self.small_font.render("Minimax vs DQN Comparison", True, GRAY)
-        subtitle_rect = subtitle.get_rect(center=(SCREEN_WIDTH // 2, 140))
-        self.screen.blit(subtitle, subtitle_rect)
+        difficulties = [
+            (Difficulty.EASY, "EASY", "25% error rate, 6 frame prediction", (100, 200, 100)),
+            (Difficulty.MEDIUM, "MEDIUM", "15% error rate, 8 frame prediction", (200, 200, 100)),
+            (Difficulty.HARD, "HARD", "5% error rate, 10 frame prediction", (200, 100, 100))
+        ]
         
-        # Balance info
-        balance_text = self.small_font.render("⚖️ Fairly Balanced Agents", True, (34, 197, 94))
-        balance_rect = balance_text.get_rect(center=(SCREEN_WIDTH // 2, 170))
-        self.screen.blit(balance_text, balance_rect)
+        for i, (diff, name, desc, color) in enumerate(difficulties):
+            y = 200 + i * 100
+            selected = diff == self.difficulty
+            
+            box_color = (60, 60, 60) if not selected else (90, 90, 90)
+            pygame.draw.rect(self.screen, box_color, (200, y - 10, 600, 80), border_radius=10)
+            
+            if selected:
+                pygame.draw.rect(self.screen, color, (200, y - 10, 600, 80), 4, border_radius=10)
+            
+            name_text = self.font.render(name, True, color)
+            name_rect = name_text.get_rect(center=(SCREEN_WIDTH // 2, y + 15))
+            self.screen.blit(name_text, name_rect)
+            
+            desc_text = self.tiny_font.render(desc, True, GRAY)
+            desc_rect = desc_text.get_rect(center=(SCREEN_WIDTH // 2, y + 45))
+            self.screen.blit(desc_text, desc_rect)
+            
+            if selected:
+                indicator = self.small_font.render("►", True, LIGHT_GREEN)
+                self.screen.blit(indicator, (160, y + 10))
         
-        # Stats boxes
-        box_width = 300
-        box_height = 150
-        
-        # Minimax box
-        pygame.draw.rect(self.screen, DARK_BLUE, 
-                        (150, 210, box_width, box_height), border_radius=10)
-        pygame.draw.rect(self.screen, BLUE, 
-                        (150, 210, box_width, box_height), 3, border_radius=10)
-        
-        text = self.font.render("Minimax (Blue)", True, BLUE)
-        self.screen.blit(text, (170, 230))
-        
-        info1 = self.small_font.render("Tree search", True, WHITE)
-        info2 = self.small_font.render("Optimal tactics", True, WHITE)
-        self.screen.blit(info1, (170, 270))
-        self.screen.blit(info2, (170, 295))
-        
-        goals = self.font.render(f"{self.total_goals_minimax} Goals", True, WHITE)
-        self.screen.blit(goals, (170, 325))
-        
-        # DQN box
-        pygame.draw.rect(self.screen, DARK_RED, 
-                        (550, 210, box_width, box_height), border_radius=10)
-        pygame.draw.rect(self.screen, RED, 
-                        (550, 210, box_width, box_height), 3, border_radius=10)
-        
-        text = self.font.render("DQN (Red)", True, RED)
-        self.screen.blit(text, (570, 230))
-        
-        info1 = self.small_font.render("RL-based", True, WHITE)
-        info2 = self.small_font.render("Adaptive strategy", True, WHITE)
-        self.screen.blit(info1, (570, 270))
-        self.screen.blit(info2, (570, 295))
-        
-        goals = self.font.render(f"{self.total_goals_dqn} Goals", True, WHITE)
-        self.screen.blit(goals, (570, 325))
-        
-        # Instructions
-        inst = self.small_font.render("Press SPACE to Start | ESC to Quit", 
+        inst = self.small_font.render("Use UP/DOWN arrows | SPACE to confirm | ESC to back", 
                                      True, GRAY)
-        inst_rect = inst.get_rect(center=(SCREEN_WIDTH // 2, 450))
+        inst_rect = inst.get_rect(center=(SCREEN_WIDTH // 2, 520))
         self.screen.blit(inst, inst_rect)
     
     def draw_game(self):
         self.screen.fill((30, 41, 59))
         
-        # Draw field
         self.draw_field()
         
-        # Draw game objects
         self.player1.draw(self.screen, self.offset_x, self.offset_y)
         self.player2.draw(self.screen, self.offset_x, self.offset_y)
         self.ball.draw(self.screen, self.offset_x, self.offset_y)
@@ -441,21 +568,55 @@ class SoccerGame:
         
         # Draw total score
         total = self.small_font.render(
-            f"All-time: Minimax {self.total_goals_minimax} - {self.total_goals_dqn} DQN", 
+            f"All-time: {self.player1.name} {self.total_goals[self.agent1_name]} - {self.total_goals[self.agent2_name]} {self.player2.name}", 
             True, GRAY)
-        total_rect = total.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 20))
+        total_rect = total.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 40))
         self.screen.blit(total, total_rect)
         
+        # Draw possession
+        if self.total_frames > 0:
+            poss_left = (self.possession_frames['left'] / self.total_frames) * 100
+            poss_right = (self.possession_frames['right'] / self.total_frames) * 100
+            
+            poss_text = self.tiny_font.render(
+                f"Possession: {poss_left:.1f}% - {poss_right:.1f}%", 
+                True, GRAY)
+            poss_rect = poss_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 20))
+            self.screen.blit(poss_text, poss_rect)
+        
         # Draw controls
-        controls = self.small_font.render("P: Pause | R: Reset | ESC: Menu", 
+        controls = self.tiny_font.render("P: Pause | R: Reset | ESC: Menu", 
                                          True, GRAY)
         self.screen.blit(controls, (10, 10))
         
-        # Draw strategy info
-        mini_strat = self.small_font.render("Minimax: Chase → Shoot", True, BLUE)
-        dqn_strat = self.small_font.render("DQN: Predict → Defend", True, RED)
-        self.screen.blit(mini_strat, (SCREEN_WIDTH - 280, 10))
-        self.screen.blit(dqn_strat, (SCREEN_WIDTH - 280, 35))
+        # Draw difficulty
+        diff_display = self.tiny_font.render(f"Difficulty: {self.difficulty.name}", 
+                                             True, YELLOW)
+        self.screen.blit(diff_display, (10, 30))
+        
+        # Draw stats (left side)
+        stats_y = 60
+        left_stats = [
+            f"{self.player1.name}",
+            f"Shots: {self.player1.shots_taken}",
+            f"On Goal: {self.player1.shots_on_goal}",
+            f"Error: {int(self.agent1.error_rate * 100)}%"
+        ]
+        for i, stat in enumerate(left_stats):
+            stat_text = self.tiny_font.render(stat, True, self.player1.color)
+            self.screen.blit(stat_text, (10, stats_y + i * 18))
+        
+        # Draw stats (right side)
+        right_stats = [
+            f"{self.player2.name}",
+            f"Shots: {self.player2.shots_taken}",
+            f"On Goal: {self.player2.shots_on_goal}",
+            f"Error: {int(self.agent2.error_rate * 100)}%"
+        ]
+        for i, stat in enumerate(right_stats):
+            stat_text = self.tiny_font.render(stat, True, self.player2.color)
+            stat_rect = stat_text.get_rect(topright=(SCREEN_WIDTH - 10, stats_y + i * 18))
+            self.screen.blit(stat_text, stat_rect)
         
         if self.state == GameState.PAUSED:
             overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -477,6 +638,8 @@ class SoccerGame:
                 if event.key == pygame.K_ESCAPE:
                     if self.state == GameState.MENU:
                         return False
+                    elif self.state == GameState.DIFFICULTY_SELECT:
+                        self.state = GameState.MENU
                     else:
                         self.state = GameState.MENU
                 
@@ -484,6 +647,12 @@ class SoccerGame:
                     if self.state == GameState.MENU:
                         self.reset_game()
                         self.state = GameState.PLAYING
+                    elif self.state == GameState.DIFFICULTY_SELECT:
+                        self.state = GameState.MENU
+                
+                elif event.key == pygame.K_d:
+                    if self.state == GameState.MENU:
+                        self.state = GameState.DIFFICULTY_SELECT
                 
                 elif event.key == pygame.K_p:
                     if self.state == GameState.PLAYING:
@@ -495,6 +664,28 @@ class SoccerGame:
                     if self.state != GameState.MENU:
                         self.reset_game()
                         self.state = GameState.PLAYING
+                
+                # Mode selection in menu
+                elif self.state == GameState.MENU:
+                    if event.key == pygame.K_1:
+                        self.agent_mode = 0
+                    elif event.key == pygame.K_2:
+                        self.agent_mode = 1
+                    elif event.key == pygame.K_3:
+                        self.agent_mode = 2
+                
+                # Difficulty selection
+                elif self.state == GameState.DIFFICULTY_SELECT:
+                    if event.key == pygame.K_UP:
+                        if self.difficulty == Difficulty.MEDIUM:
+                            self.difficulty = Difficulty.EASY
+                        elif self.difficulty == Difficulty.HARD:
+                            self.difficulty = Difficulty.MEDIUM
+                    elif event.key == pygame.K_DOWN:
+                        if self.difficulty == Difficulty.EASY:
+                            self.difficulty = Difficulty.MEDIUM
+                        elif self.difficulty == Difficulty.MEDIUM:
+                            self.difficulty = Difficulty.HARD
         
         return True
     
@@ -507,6 +698,8 @@ class SoccerGame:
             
             if self.state == GameState.MENU:
                 self.draw_menu()
+            elif self.state == GameState.DIFFICULTY_SELECT:
+                self.draw_difficulty_select()
             else:
                 self.draw_game()
             

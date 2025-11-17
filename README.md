@@ -1,355 +1,377 @@
-# AI Soccer: Minimax vs DQN Comparison (Python)
+# 🤖⚽ AI Soccer - Algorithm Comparison Game
 
-A 2D soccer game built with Pygame demonstrating two AI approaches: Minimax (classical tree search) and DQN (Deep Q-Learning inspired). Perfect for AI case studies and educational purposes.
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![Pygame](https://img.shields.io/badge/pygame-2.5.0+-green.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Status](https://img.shields.io/badge/status-active-success.svg)
 
-![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
-![Pygame](https://img.shields.io/badge/pygame-2.5.2-green)
-![License](https://img.shields.io/badge/license-MIT-blue)
+An AI soccer game showcasing different artificial intelligence algorithms competing against each other in real-time. Watch **Minimax**, **DQN**, and **Heuristic** agents battle it out on the field!
 
-## 🎮 Features
+## 📋 Table of Contents
 
-- **Real-time AI vs AI gameplay** at 60 FPS
-- **Minimax Algorithm**: Classical tree-search approach for optimal short-term decisions
-- **DQN Agent**: Deep reinforcement learning-inspired agent with predictive behavior
-- **Live score tracking** with match and all-time statistics
-- **Interactive controls**: Pause, resume, reset functionality
-- **Visual comparison** of different AI strategies
-- **Cross-platform**: Works on Windows, Mac, Linux, and Codespaces
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [AI Algorithms](#ai-algorithms)
+- [Game Mechanics](#game-mechanics)
+- [Testing](#testing)
+- [Screenshots](#screenshots)
+- [Project Structure](#project-structure)
 
-## 🎥 Demo
-```
-Blue Player (M) - Minimax: Chases ball → Shoots at goal
-Red Player (D) - DQN: Predicts trajectory → Intercepts
-```
 
-## 🚀 Quick Start
+## 🎯 Overview
+
+AI Soccer is an interactive demonstration of different AI decision-making algorithms in a competitive environment. The game features three distinct AI agents, each using different strategies to control virtual soccer players. All agents are **carefully balanced** to ensure fair and competitive matches.
+
+### Key Highlights
+
+- ✅ **Three AI Algorithms**: Minimax, DQN-inspired, and Heuristic agents
+- ✅ **Balanced Gameplay**: All agents have equal parameters for fair competition
+- ✅ **Educational**: Perfect for studying AI algorithms in action
+- ✅ **Interactive**: Real-time statistics and match tracking
+- ✅ **Three Difficulty Levels**: Easy, Medium, and Hard
+- ✅ **Comprehensive Testing**: Full test suite included
+
+## ✨ Features
+
+### 🤖 AI Agents
+
+1. **Minimax Agent** (Blue)
+   - Uses game tree search principles
+   - 8-frame ball trajectory prediction
+   - Strategic positioning and optimal moves
+   
+2. **DQN Agent** (Purple)
+   - Inspired by Deep Q-Network principles
+   - 10-frame ball trajectory prediction
+   - Adaptive learning-based behavior
+   
+3. **Heuristic Agent** (Red)
+   - Rule-based decision making
+   - 10-frame ball trajectory prediction
+   - Defensive and offensive positioning
+
+### 🎮 Game Features
+
+- **Multiple Match Types**: 
+  - Minimax vs DQN
+  - Minimax vs Heuristic
+  - DQN vs Heuristic
+  
+- **Difficulty Levels**:
+  - **Easy**: 25% error rate, 6-frame prediction
+  - **Medium**: 15% error rate, 8-frame prediction
+  - **Hard**: 5% error rate, 10-frame prediction
+
+- **Real-time Statistics**:
+  - Live score tracking
+  - Possession percentages
+  - Shots taken vs shots on goal
+  - All-time match history
+
+- **Game Controls**:
+  - Pause/Resume functionality
+  - Match reset
+  - Difficulty selection
+  - Mode switching
+
+## 🚀 Installation
 
 ### Prerequisites
 
 - Python 3.8 or higher
-- pip package manager
+- pip (Python package manager)
 
-### Installation
+### Step 1: Clone the Repository
 
-1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/ai-soccer-python.git
-cd ai-soccer-python
+git clone https://github.com/Amrutha-M05/ai-soccer.git
+cd ai-soccer
 ```
 
-2. **Install dependencies**
+### Step 2: Install Dependencies
+
+```bash
+pip install pygame
+```
+
+Or using requirements.txt:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-3. **Run the game**
+### Step 3: Run the Game
+
 ```bash
-python main.py
+python ai_soccer_complete.py
 ```
 
-### For GitHub Codespaces
-```bash
-# Install dependencies
-pip install -r requirements.txt
+## 🎮 Usage
 
-# Run with virtual display (for Codespaces)
-python main.py
+### Controls
+
+**Main Menu:**
+- `1/2/3` - Select match type
+- `D` - Open difficulty settings
+- `SPACE` - Start game
+- `ESC` - Quit
+
+**In-Game:**
+- `P` - Pause/Resume
+- `R` - Reset match
+- `ESC` - Return to menu
+
+**Difficulty Selection:**
+- `UP/DOWN` - Change difficulty
+- `SPACE` - Confirm
+- `ESC` - Back to menu
+
+### Running Tests
+
+Run the comprehensive test suite:
+
+```bash
+python test.py
 ```
 
-## 🎮 Controls
+The test suite validates:
+- Agent parameter balance
+- Shooting behavior
+- Movement speeds
+- Ball physics
+- Goal detection
+- Match simulations
 
-| Key | Action |
-|-----|--------|
-| `SPACE` | Start game from menu |
-| `P` | Pause/Resume game |
-| `R` | Reset current match |
-| `ESC` | Return to menu / Quit |
+## 🧠 AI Algorithms
+
+### Minimax Agent
+
+**Strategy**: Tree search with lookahead planning
+
+```python
+# Key characteristics
+- Prediction frames: 8 (Medium difficulty)
+- Error rate: 15% (Medium difficulty)
+- Shooting range: < 20 pixels
+- Approach: Predicts opponent moves and ball trajectory
+```
+
+**Decision Process**:
+1. Evaluate current game state
+2. Predict ball and opponent positions
+3. Calculate optimal move direction
+4. Execute movement and shooting
+
+### DQN Agent
+
+**Strategy**: Q-Learning inspired decision making
+
+```python
+# Key characteristics
+- Prediction frames: 10 (Medium difficulty)
+- Error rate: 15% (Medium difficulty)
+- Shooting range: < 20 pixels
+- Approach: Trajectory prediction with adaptive behavior
+```
+
+**Decision Process**:
+1. Analyze ball velocity and position
+2. Predict future ball location
+3. Intercept predicted position
+4. Shoot when in range
+
+### Heuristic Agent
+
+**Strategy**: Rule-based tactical decisions
+
+```python
+# Key characteristics
+- Prediction frames: 10 (Medium difficulty)
+- Error rate: 15% (Medium difficulty)
+- Shooting range: < 20 pixels
+- Approach: Hand-crafted rules and positioning
+```
+
+**Decision Process**:
+1. Check distance to ball
+2. Predict ball trajectory
+3. Chase or defend based on situation
+4. Shoot when opportunity arises
+
+## ⚙️ Game Mechanics
+
+### Ball Physics
+
+```python
+# Ball movement
+- Velocity decay: 0.98 per frame (2% friction)
+- Boundary collision: 80% velocity retention
+- Kick power: 6.5-8.5 (variable)
+- Starting speed: 2-4 units
+```
+
+### Player Movement
+
+```python
+# Player properties
+- Base speed: 3.5 units/frame
+- Player radius: 20 pixels
+- Shooting range: < 20 pixels
+- Kick detection: 8 pixels from ball
+```
+
+### Scoring System
+
+```python
+# Goal detection
+- Goal width: 20 pixels
+- Goal height: 150 pixels
+- Left goal (x=0): Right team scores
+- Right goal (x=800): Left team scores
+```
+
+### Balance System
+
+All agents share equal parameters at the same difficulty:
+
+| Parameter  | Easy | Medium| Hard  |
+|----------- |------|-------|------ |
+| Error Rate | 25% | 15%    | 5%    |
+| Prediction | 6f  | 8-10f  | 10-12f|
+| Base Speed | 3.5 | 3.5    | 3.5   |
+| Shoot Range|<20px| <20px  | <20px |
+
+## 🧪 Testing
+
+### Test Suite Coverage
+
+```bash
+# Run all tests
+python test.py
+
+# Test categories:
+✓ Agent parameter balance (3 tests)
+✓ Shooting behavior (3 tests)
+✓ Movement speeds (2 tests)
+✓ Ball physics (3 tests)
+✓ Goal detection (3 tests)
+✓ Match simulation (3 tests)
+```
+
+### Expected Test Results
+
+```
+Total Tests: 15
+Passed: 15 (100.0%)
+Failed: 0 (0.0%)
+```
+
+## 📸 Screenshots
+
+```
+Main Menu:
+┌─────────────────────────────────────┐
+│           AI SOCCER                 │
+│   Balanced AI Competition           │
+│                                     │
+│  Difficulty: MEDIUM                 │
+│                                     │
+│  ► 1: Minimax vs DQN                │
+│     All-time: 5 - 4                 │
+│                                     │
+│    2: Minimax vs Heuristic          │
+│     All-time: 3 - 3                 │
+│                                     │
+│    3: DQN vs Heuristic              │
+│     All-time: 4 - 5                 │
+│                                     │
+│  SPACE: Start | D: Difficulty       │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│  Minimax        3 - 2        DQN    │
+│  ┌─────────────────────────────┐    │
+│  │         [Soccer Field]      │    │
+│  │  🔵         ⚪      🟣     │    │
+│  │                             │    │
+│  └─────────────────────────────┘    │
+│  Possession: 52.3% - 47.7%          │
+│  All-time: Minimax 15 - 13 DQN      │
+└─────────────────────────────────────┘
+```
 
 ## 📁 Project Structure
+
 ```
-ai-soccer-python/
-├── main.py                 # Main game file with all logic
-├── minimax_agent.py        # Standalone Minimax implementation
-├── dqn_agent.py           # Standalone DQN agent implementation
-├── game_engine.py         # Game physics and rendering
-├── requirements.txt       # Python dependencies
-├── README.md             # This file
-├── .gitignore           # Git ignore file
-└── screenshots/         # Game screenshots
-    ├── menu.png
-    └── gameplay.png
+ai-soccer/
+│
+├── ai_soccer_complete.py    # Main game file
+├── test.py                  # Test suite
+├── requirements.txt         # Python dependencies
+├── README.md               # This file
+│
+│
+└── assets/                # Game assets 
+    └── screenshots/       # Game screenshots
 ```
-
-## 🧠 AI Algorithms Explained
-
-### Minimax Algorithm
-
-**File**: `minimax_agent.py`
-```python
-class MinimaxAgent:
-    def get_action(self, ball, opponent):
-        # Strategy:
-        # 1. Calculate distance to ball
-        # 2. If far: Move towards ball
-        # 3. If close: Aim and shoot at goal
-```
-
-**Characteristics:**
-- ✅ Optimal for short-term tactical decisions
-- ✅ Deterministic and predictable
-- ✅ Fast computation for real-time gameplay
-- ❌ Limited lookahead depth
-- ❌ Doesn't learn from experience
-
-**Strategy:**
-1. Chase ball directly when far away
-2. Aim for goal when close to ball
-3. Shoot with calculated angle and power
-
-### DQN (Deep Q-Network) Agent
-
-**File**: `dqn_agent.py`
-```python
-class DQNAgent:
-    def get_action(self, ball, opponent):
-        # Strategy:
-        # 1. Predict ball trajectory (10 frames ahead)
-        # 2. If ball nearby: Aggressive chase
-        # 3. If ball far: Strategic positioning
-```
-
-**Characteristics:**
-- ✅ Adaptive and strategic positioning
-- ✅ Considers future game states
-- ✅ Better ball interception
-- ❌ More complex decision-making
-- ⚠️ Simplified (no neural network training in this demo)
-
-**Strategy:**
-1. Predict ball position 10 frames ahead
-2. Intercept predicted positions
-3. Aggressive pursuit when ball is close
-4. Defensive positioning when ball is far
-
-## 📊 Performance Comparison
-
-### Metrics Tracked:
-
-1. **Goals Scored**
-   - Match goals (current game)
-   - All-time goals (across all matches)
-
-2. **Strategy Effectiveness**
-   - Ball possession time
-   - Shot accuracy
-   - Defensive positioning
-
-3. **Real-time Performance**
-   - Decision time per frame
-   - Movement efficiency
-
-### Expected Results:
-
-Based on algorithm design:
-- **Minimax**: Better at direct offense, struggles with defense
-- **DQN**: Better at interception and positioning, more balanced play
-
-## 🔧 Customization
-
-### Adjust Game Parameters
-
-Edit constants in `main.py`:
-```python
-# Field dimensions
-FIELD_WIDTH = 800
-FIELD_HEIGHT = 500
-
-# Entity sizes
-PLAYER_SIZE = 20    # Player radius
-BALL_SIZE = 10      # Ball radius
-GOAL_HEIGHT = 150   # Goal post height
-
-# Game speed
-FPS = 60           # Frames per second
-```
-
-### Modify AI Behavior
-
-**Minimax Agent** (`minimax_agent.py`):
-```python
-# Adjust chase distance threshold
-if dist_to_ball > 5:  # Change this value
-
-# Modify movement speed
-return (dx / dist * self.player.speed)  # Adjust speed multiplier
-
-# Change shooting behavior
-if dist_to_ball < 15:  # Shooting range
-```
-
-**DQN Agent** (`dqn_agent.py`):
-```python
-# Tune prediction horizon
-predicted_x = ball.x + ball.vx * 10  # Change prediction frames
-
-# Adjust aggression
-if dist_to_ball < 30:  # Aggression range
-
-# Modify interception logic
-return (dx / dist * self.player.speed * 1.2)  # Speed multiplier
-```
-
-## 🎓 Educational Use Cases
-
-### 1. Algorithm Comparison Study
-- Compare classical AI (Minimax) vs modern RL (DQN)
-- Measure performance metrics
-- Analyze decision-making strategies
-
-### 2. Game AI Development
-- Learn real-time decision making
-- Understand pathfinding and targeting
-- Explore agent coordination
-
-### 3. Reinforcement Learning Introduction
-- See RL concepts in action
-- Understand state-action-reward paradigm
-- Foundation for implementing true DQN with neural networks
-
-### 4. Computer Science Projects
-- AI course assignments
-- Capstone projects
-- Research demonstrations
-
-## 📈 Extension Ideas
-
-### Easy Additions:
-- [ ] Add more AI agents (A*, MCTS, Random)
-- [ ] Implement replay system
-- [ ] Add sound effects
-- [ ] Create multiple difficulty levels
-- [ ] Add training mode
-
-### Advanced Features:
-- [ ] Implement true DQN with TensorFlow/PyTorch
-- [ ] Add neural network training visualization
-- [ ] Multi-agent reinforcement learning
-- [ ] Tournament mode with multiple agents
-- [ ] Performance profiling dashboard
-
-### Research Extensions:
-- [ ] Compare alpha-beta pruning vs basic Minimax
-- [ ] Implement Monte Carlo Tree Search
-- [ ] Add PPO (Proximal Policy Optimization) agent
-- [ ] Create evolutionary algorithm player
-
-## 🐛 Troubleshooting
-
-### Pygame not installing?
-```bash
-# On Ubuntu/Debian
-sudo apt-get install python3-dev python3-pygame
-
-# On macOS
-brew install pygame
-
-# On Windows
-pip install pygame --user
-```
-
-### Game running slow?
-- Reduce FPS in `main.py`: `FPS = 30`
-- Decrease field size
-- Simplify AI calculations
-
-### No display in Codespaces?
-```bash
-# Install virtual display
-sudo apt-get install xvfb
-Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-export DISPLAY=:99
-python main.py
-```
-
-## 📝 Code Quality
-
-- ✅ PEP 8 compliant
-- ✅ Type hints ready
-- ✅ Well-commented code
-- ✅ Modular design
-- ✅ Easy to extend
 
 ## 🤝 Contributing
 
-Contributions welcome! Areas for improvement:
+Contributions are welcome! Here's how you can help:
 
-1. **AI Enhancements**
-   - Implement true neural network-based DQN
-   - Add more sophisticated Minimax with alpha-beta pruning
-   - Create A* pathfinding agent
+1. **Fork the repository**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+3. **Make your changes**
+4. **Run tests**
+   ```bash
+   python test.py
+   ```
+5. **Commit your changes**
+   ```bash
+   git commit -m 'Add amazing feature'
+   ```
+6. **Push to the branch**
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+7. **Open a Pull Request**
 
-2. **Features**
-   - Multiplayer mode
-   - Tournament system
-   - Statistics dashboard
-   - Replay functionality
+### Development Guidelines
 
-3. **Documentation**
-   - Add algorithm complexity analysis
-   - Create tutorial videos
-   - Write detailed strategy guides
+- Follow PEP 8 style guidelines
+- Add tests for new features
+- Update documentation as needed
+- Ensure all tests pass before submitting PR
+- Keep agents balanced (equal parameters)
 
-## 📄 License
+## 🐛 Known Issues
 
-MIT License - Free for educational and commercial use
+- Occasionally players may get stuck at field boundaries
+- Very fast ball speeds may cause collision detection issues
+- Goal detection may fail if ball moves too quickly
 
-## 🙏 Acknowledgments
+## 🔮 Future Enhancements
 
-- Pygame community for excellent documentation
-- OpenAI Gym for inspiration on game environments
-- DeepMind for DQN research papers
+- [ ] Add neural network-based DQN implementation
+- [ ] Implement true minimax with alpha-beta pruning
+- [ ] Add replay system
+- [ ] Include training mode for agents
+- [ ] Add sound effects and music
+- [ ] Multiplayer mode (human vs AI)
+- [ ] Tournament mode with brackets
+- [ ] Save/load game statistics
+- [ ] Export match recordings
 
-## 📧 Contact
+## 📖 References
 
-For questions, suggestions, or collaboration:
-- Open an issue on GitHub
-- Email: your.email@example.com
+- [Minimax Algorithm](https://en.wikipedia.org/wiki/Minimax)
+- [Deep Q-Networks (DQN)](https://arxiv.org/abs/1312.5602)
+- [Pygame Documentation](https://www.pygame.org/docs/)
+- [Python AI Game Development](https://realpython.com/pygame-a-primer/)
 
----
 
-**Star ⭐ this repo if you find it useful for your AI studies!**
-```
-
-**.gitignore:**
-```
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Virtual environments
-venv/
-env/
-ENV/
-.venv
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-.DS_Store
-
-# Pygame
-*.pyc
-
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
-
-# Logs
-*.log
-
-# OS
-Thumbs.db
