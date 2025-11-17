@@ -313,8 +313,7 @@ ai-soccer/
 ├── README.md               # This file
 │
 │
-└── assets/                # Game assets 
-    └── screenshots/       # Game screenshots
+└── screenshots/       # Game screenshots
 ```
 
 ## 🤝 Contributing
